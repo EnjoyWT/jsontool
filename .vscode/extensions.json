@@ -1,0 +1,13 @@
+{
+  "recommendations": ["Vue.volar"],
+  "css.lint.unknownAtRules": "ignore",
+  "tailwindCSS.experimental.classRegex": [],
+  "tailwindCSS.lint.cssConflict": "warning",
+  "tailwindCSS.lint.invalidApply": "ignore",
+  "tailwindCSS.lint.invalidConfigPath": "error",
+  "tailwindCSS.lint.invalidScreen": "error",
+  "tailwindCSS.lint.invalidTailwindDirective": "error",
+  "tailwindCSS.lint.invalidVariant": "error",
+  "tailwindCSS.lint.recommendedVariantOrder": "ignore",
+  "tailwindCSS.lint.suggestCanonicalClasses": "ignore"
+}

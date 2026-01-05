@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+:root {
+  /* 浅色柔和配色方案 */
+  --color-bg-base: #FAFBFC;
+  --color-bg-card: #FFFFFF;
+  --color-border: #E5E7EB;
+  --color-border-hover: #D1D5DB;
+
+  --color-text-primary: #1F2937;
+  --color-text-secondary: #6B7280;
+  --color-text-muted: #9CA3AF;
+
+  --color-primary: #6366F1;
+  --color-primary-hover: #4F46E5;
+  --color-primary-light: #EEF2FF;
+
+  --color-success: #10B981;
+  --color-success-bg: #D1FAE5;
+  --color-error: #EF4444;
+  --color-error-bg: #FEE2E2;
+
+  --color-btn-bg: #F3F4F6;
+  --color-btn-hover: #E5E7EB;
+}
+
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+}
+
+/* Monaco Editor 容器 */
+.monaco-editor-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-hover);
+}
+
+/* 拖拽分割线 */
+.resize-handle {
+  width: 4px;
+  background: var(--color-border);
+  cursor: col-resize;
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.resize-handle:hover,
+.resize-handle.dragging {
+  background: var(--color-primary);
+}
+
+/* 下拉菜单动画 */
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition: all 0.15s ease;
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+/* Toast 动画 - 从上方滑入 */
+.toast-enter-active,
+.toast-leave-active {
+  transition: opacity 0.2s ease, margin-top 0.2s ease;
+}
+
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  margin-top: -16px;
+}
+
+.toast-enter-to,
+.toast-leave-from {
+  opacity: 1;
+  margin-top: 0;
+}

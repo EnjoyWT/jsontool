@@ -1,0 +1,107 @@
+import jsonlint from 'jsonlint-mod';
+import yaml from 'js-yaml';
+import convert from 'xml-js';
+
+export interface ValidationResult {
+  valid: boolean;
+  error?: string;
+  line?: number;
+  column?: number;
+}
+
+export const formatJson = (text: string): string => {
+  try {
+    const obj = JSON.parse(text);
+    return JSON.stringify(obj, null, 2);
+  } catch (e) {
+    return text;
+  }
+};
+
+export const minifyJson = (text: string): string => {
+  try {
+    const obj = JSON.parse(text);
+    return JSON.stringify(obj);
+  } catch (e) {
+    return text;
+  }
+};
+
+export const validateJson = (text: string): ValidationResult => {
+  if (!text.trim()) return { valid: true };
+  try {
+    jsonlint.parse(text);
+    return { valid: true };
+  } catch (e: any) {
+    const message = e.message || String(e);
+    const lineMatch = message.match(/line (\d+)/i);
+    const colMatch = message.match(/column (\d+)/i);
+    return {
+      valid: false,
+      error: message,
+      line: lineMatch ? parseInt(lineMatch[1], 10) : undefined,
+      column: colMatch ? parseInt(colMatch[1], 10) : undefined
+    };
+  }
+};
+
+export const sortJsonKeys = (text: string): string => {
+  try {
+    const obj = JSON.parse(text);
+    const sortObj = (item: any): any => {
+      if (Array.isArray(item)) return item.map(sortObj);
+      if (item !== null && typeof item === 'object') {
+        return Object.keys(item).sort().reduce((acc: any, key) => {
+          acc[key] = sortObj(item[key]);
+          return acc;
+        }, {});
+      }
+      return item;
+    };
+    return JSON.stringify(sortObj(obj), null, 2);
+  } catch (e) {
+    return text;
+  }
+};
+
+export const jsonToYaml = (text: string): string => {
+  try {
+    const obj = JSON.parse(text);
+    return yaml.dump(obj);
+  } catch (e) {
+    return "Error converting to YAML: Invalid JSON";
+  }
+};
+
+export const jsonToXml = (text: string): string => {
+  try {
+    const obj = JSON.parse(text);
+    return convert.js2xml(obj, { compact: true, spaces: 2 });
+  } catch (e) {
+    return "Error converting to XML: Invalid JSON. (Ensure JSON structure is compatible with XML, e.g., single root element)";
+  }
+};
+
+export const escapeJson = (text: string): string => {
+  return text.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+};
+
+export const unescapeJson = (text: string): string => {
+  return text.replace(/\\"/g, "\"").replace(/\\\\/g, "\\");
+};
+
+export const unicodeToChinese = (text: string): string => {
+  return text.replace(/\\u([0-9a-fA-F]{4})/g, (_match, grp) => {
+    return String.fromCharCode(parseInt(grp, 16));
+  });
+};
+
+export const chineseToUnicode = (text: string): string => {
+  return text.split('').map(char => {
+    const code = char.charCodeAt(0);
+    if (code > 127) {
+      return "\\u" + code.toString(16).padStart(4, '0');
+    }
+    return char;
+  }).join('');
+};
