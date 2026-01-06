@@ -1,6 +1,7 @@
 import jsonlint from 'jsonlint-mod';
 import yaml from 'js-yaml';
 import convert from 'xml-js';
+import beautify from 'js-beautify';
 
 export interface ValidationResult {
   valid: boolean;
@@ -11,8 +12,24 @@ export interface ValidationResult {
 
 export const formatJson = (text: string): string => {
   try {
-    const obj = JSON.parse(text);
-    return JSON.stringify(obj, null, 2);
+    // 使用 js-beautify 进行美化，它比原生的 JSON.stringify 更强大，可以处理带注释的 JSON
+    return beautify.js_beautify(text, {
+      indent_size: 2,
+      indent_char: ' ',
+      max_preserve_newlines: 2,
+      preserve_newlines: true,
+      keep_array_indentation: false,
+      break_chained_methods: false,
+      brace_style: 'collapse',
+      space_before_conditional: true,
+      unescape_strings: false,
+      jslint_happy: false,
+      end_with_newline: false,
+      wrap_line_length: 0,
+      comma_first: false,
+      e4x: false,
+      indent_empty_lines: false
+    });
   } catch (e) {
     return text;
   }

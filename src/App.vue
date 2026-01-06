@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch } from "vue";
 import Toolbar from "./components/Toolbar.vue";
+import EditorActions from "./components/EditorActions.vue";
 import JsonEditor from "./components/JsonEditor.vue";
 import TreeView from "./components/TreeView.vue";
 import { CheckCircle2, AlertCircle, X } from "lucide-vue-next";
@@ -190,37 +191,41 @@ const handleAction = (action: string) => {
 
 <template>
   <div class="flex flex-col h-screen overflow-hidden bg-[var(--color-bg-base)]">
-    <!-- Toolbar -->
-    <Toolbar
-      @format="handleAction('format')"
-      @minify="handleAction('minify')"
-      @verify="handleAction('verify')"
-      @sort="handleAction('sort')"
-      @toYaml="handleAction('toYaml')"
-      @toXml="handleAction('toXml')"
-      @escape="handleAction('escape')"
-      @unescape="handleAction('unescape')"
-      @unicodeToChinese="handleAction('unicodeToChinese')"
-      @chineseToUnicode="handleAction('chineseToUnicode')"
-      @clear="handleAction('clear')"
-      @copy="handleAction('copy')"
-      @download="handleAction('download')"
-    />
+    <!-- Top-level TabBar -->
+    <Toolbar />
 
     <!-- Main Content: Split Pane -->
-    <main class="flex-1 flex overflow-hidden p-4 gap-0" ref="containerRef">
+    <main class="flex-1 flex overflow-hidden p-3 gap-0" ref="containerRef">
       <!-- Left Pane: Editor -->
       <div
         class="flex flex-col min-w-0 bg-[var(--color-bg-card)] rounded-l-xl shadow-sm border border-[var(--color-border)] border-r-0 overflow-hidden"
         :style="{ width: `${leftPaneWidth}%` }"
       >
         <div
-          class="flex items-center justify-between px-4 py-2 border-b border-[var(--color-border)] bg-[var(--color-bg-base)]"
+          class="flex items-center justify-between px-3 py-1.5 border-b border-[var(--color-border)] bg-[var(--color-bg-base)]"
         >
-          <span class="text-sm font-medium text-[var(--color-text-secondary)]"
-            >编辑器</span
-          >
-          <span class="text-xs font-mono text-[var(--color-text-muted)]">
+          <div class="flex items-center gap-4">
+            <span class="text-sm font-bold text-[var(--color-text-primary)]"
+              >编辑器</span
+            >
+            <!-- Integrated Action Group -->
+            <EditorActions
+              @format="handleAction('format')"
+              @minify="handleAction('minify')"
+              @verify="handleAction('verify')"
+              @sort="handleAction('sort')"
+              @toYaml="handleAction('toYaml')"
+              @toXml="handleAction('toXml')"
+              @escape="handleAction('escape')"
+              @unescape="handleAction('unescape')"
+              @unicodeToChinese="handleAction('unicodeToChinese')"
+              @chineseToUnicode="handleAction('chineseToUnicode')"
+              @clear="handleAction('clear')"
+              @copy="handleAction('copy')"
+              @download="handleAction('download')"
+            />
+          </div>
+          <span class="text-[10px] font-mono text-[var(--color-text-muted)]">
             {{ jsonText.split("\n").length }} 行 ·
             {{ (jsonText.length / 1024).toFixed(2) }} KB
           </span>
@@ -248,7 +253,7 @@ const handleAction = (action: string) => {
         :style="{ width: `${100 - leftPaneWidth}%` }"
       >
         <div
-          class="flex items-center px-4 py-2 border-b border-[var(--color-border)] bg-[var(--color-bg-base)]"
+          class="flex items-center px-4 py-1.5 border-b border-[var(--color-border)] bg-[var(--color-bg-base)] h-[37px]"
         >
           <span class="text-sm font-medium text-[var(--color-text-secondary)]"
             >预览</span
