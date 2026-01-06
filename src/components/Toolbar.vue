@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { LayoutPanelLeft } from "lucide-vue-next";
-
+// No unused imports here
 defineProps<{
   showHistory: boolean;
 }>();

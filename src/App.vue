@@ -57,7 +57,7 @@ const addToHistory = (content: string) => {
   if (!content.trim()) return;
   
   // 检查是否与最近一条相同
-  if (historyItems.value.length > 0 && historyItems.value[0].content === content) {
+  if (historyItems.value.length > 0 && historyItems.value[0]?.content === content) {
     return;
   }
 
