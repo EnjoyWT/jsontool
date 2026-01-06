@@ -84,11 +84,9 @@ const deleteHistoryItem = (id: string) => {
 };
 
 const clearHistory = () => {
-  if (confirm("确定要清空所有历史记录吗？")) {
-    historyItems.value = [];
-    saveHistoryToLocal();
-    showMessage("success", "历史记录已清空");
-  }
+  historyItems.value = [];
+  saveHistoryToLocal();
+  showMessage("success", "历史记录已清空");
 };
 
 const selectHistoryItem = (content: string) => {
