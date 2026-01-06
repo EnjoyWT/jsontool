@@ -93,7 +93,6 @@ const clearHistory = () => {
 
 const selectHistoryItem = (content: string) => {
   jsonText.value = content;
-  showMessage("success", "已加载历史记录");
 };
 
 // 实时校验 JSON

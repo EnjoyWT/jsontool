@@ -10,7 +10,7 @@ defineEmits(["toggleHistory"]);
 
 <template>
   <div
-    class="flex items-center justify-between px-4 py-2 bg-[var(--color-bg-card)] border-b border-[var(--color-border)]"
+    class="flex items-center justify-between px-4 py-2 border-b border-[var(--color-border)]"
   >
     <!-- Tabs Container -->
     <div class="flex items-center gap-1 overflow-x-auto no-scrollbar">
@@ -27,8 +27,7 @@ defineEmits(["toggleHistory"]);
     </div>
 
     <!-- Actions -->
-    <div class="flex items-center">
-    </div>
+    <div class="flex items-center"></div>
   </div>
 </template>
 

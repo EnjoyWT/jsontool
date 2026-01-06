@@ -65,14 +65,14 @@ onBeforeUnmount(() => {
 
 <template>
   <div
-    class="flex flex-col h-full bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl w-64 shrink-0 transition-all duration-300 overflow-hidden shadow-sm"
+    class="flex flex-col h-full border border-[var(--color-border)] rounded-xl w-64 shrink-0 transition-all duration-300 overflow-hidden shadow-sm"
   >
-    <!-- Header: Match body background -->
-    <div class="flex flex-col p-4">
-      <div class="flex items-center justify-between mb-4">
+    <!-- Header: Optimized for alignment with Editor Title -->
+    <div class="flex flex-col">
+      <div class="flex items-center justify-between px-4 py-1.5 h-[37px]">
         <div class="flex items-center gap-2">
           <div
-            class="px-3 py-1 bg-[var(--color-primary)] text-white text-xs font-medium rounded-full"
+            class="px-3 py-0.5 bg-[var(--color-primary)] text-white text-[10px] font-medium rounded-full"
           >
             历史
           </div>
@@ -96,7 +96,8 @@ onBeforeUnmount(() => {
         </button>
       </div>
 
-      <div class="flex items-center gap-2">
+      <!-- Actions Area (Refresh/Clear) -->
+      <div class="flex items-center gap-2 px-4 pb-3">
         <button
           @click="$emit('refresh')"
           title="刷新历史"
@@ -131,7 +132,7 @@ onBeforeUnmount(() => {
         v-for="item in items"
         :key="item.id"
         @click="$emit('select', item.content)"
-        class="group relative p-3 bg-transparent border border-[var(--color-border)] rounded-lg hover:border-[var(--color-primary)] hover:bg-[var(--color-btn-bg)] cursor-pointer transition-all duration-200"
+        class="group relative p-3 bg-white border border-[var(--color-border)] rounded-lg hover:border-[var(--color-primary)] hover:shadow-sm cursor-pointer transition-all duration-200"
       >
         <div class="flex flex-col gap-1.5 pr-6">
           <div class="text-xs font-medium text-[var(--color-text-primary)]">
