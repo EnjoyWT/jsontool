@@ -100,6 +100,23 @@ const showMessage = (type: "success" | "error", text: string) => {
 
 const handleAction = (action: string) => {
   message.value = null;
+
+  // 检查内容是否为空
+  if (!jsonText.value.trim() && action !== "clear") {
+    if (["format", "minify", "verify", "sort", "toYaml", "toXml", "escape", "unescape", "unicodeToChinese", "chineseToUnicode"].includes(action)) {
+      showMessage("error", "请输入内容");
+      return;
+    }
+    if (action === "copy") {
+      showMessage("error", "内容为空，无法复制");
+      return;
+    }
+    if (action === "download") {
+      showMessage("error", "内容为空，无法下载");
+      return;
+    }
+  }
+
   switch (action) {
     case "format":
       // 先校验，有错误提示，尽可能格式化
@@ -110,15 +127,20 @@ const handleAction = (action: string) => {
       } else {
         // 尝试尽可能格式化，但提示错误
         try {
-          jsonText.value = formatJson(jsonText.value);
-          showMessage(
-            "error",
-            `JSON 存在错误: ${formatResult.error}${
-              formatResult.line
-                ? ` (行: ${formatResult.line}, 列: ${formatResult.column})`
-                : ""
-            }`
-          );
+          const formatted = formatJson(jsonText.value);
+          if (formatted === jsonText.value && !formatResult.valid) {
+             showMessage("error", `JSON 格式错误，无法格式化: ${formatResult.error}`);
+          } else {
+            jsonText.value = formatted;
+            showMessage(
+              "error",
+              `JSON 存在错误: ${formatResult.error}${
+                formatResult.line
+                  ? ` (行: ${formatResult.line}, 列: ${formatResult.column})`
+                  : ""
+              }`
+            );
+          }
         } catch {
           showMessage(
             "error",
@@ -132,7 +154,17 @@ const handleAction = (action: string) => {
       }
       break;
     case "minify":
-      jsonText.value = minifyJson(jsonText.value);
+      const minifyResult = validateJson(jsonText.value);
+      if (minifyResult.valid) {
+        try {
+          jsonText.value = minifyJson(jsonText.value);
+          showMessage("success", "JSON 压缩成功");
+        } catch (e: any) {
+          showMessage("error", `JSON 压缩失败: ${e.message || "未知错误"}`);
+        }
+      } else {
+        showMessage("error", `JSON 格式错误，无法压缩: ${minifyResult.error}`);
+      }
       break;
     case "verify":
       const result = validateJson(jsonText.value);
@@ -148,28 +180,63 @@ const handleAction = (action: string) => {
       }
       break;
     case "sort":
-      jsonText.value = sortJsonKeys(jsonText.value);
+      const sortResult = validateJson(jsonText.value);
+      if (sortResult.valid) {
+        try {
+          jsonText.value = sortJsonKeys(jsonText.value);
+          showMessage("success", "JSON 键名排序成功");
+        } catch (e: any) {
+          showMessage("error", `排序失败: ${e.message || "未知错误"}`);
+        }
+      } else {
+        showMessage("error", `JSON 格式错误，无法排序: ${sortResult.error}`);
+      }
       break;
     case "toYaml":
-      jsonText.value = jsonToYaml(jsonText.value);
+      const yamlResult = validateJson(jsonText.value);
+      if (yamlResult.valid) {
+        try {
+          jsonText.value = jsonToYaml(jsonText.value);
+          showMessage("success", "已成功转为 YAML");
+        } catch (e: any) {
+          showMessage("error", `转为 YAML 失败: ${e.message || "未知错误"}`);
+        }
+      } else {
+        showMessage("error", `JSON 格式错误，无法转换: ${yamlResult.error}`);
+      }
       break;
     case "toXml":
-      jsonText.value = jsonToXml(jsonText.value);
+      const xmlResult = validateJson(jsonText.value);
+      if (xmlResult.valid) {
+        try {
+          jsonText.value = jsonToXml(jsonText.value);
+          showMessage("success", "已成功转为 XML");
+        } catch (e: any) {
+          showMessage("error", `转为 XML 失败: ${e.message || "未知错误"}`);
+        }
+      } else {
+        showMessage("error", `JSON 格式错误，无法转换: ${xmlResult.error}`);
+      }
       break;
     case "escape":
       jsonText.value = escapeJson(jsonText.value);
+      showMessage("success", "转义成功");
       break;
     case "unescape":
       jsonText.value = unescapeJson(jsonText.value);
+      showMessage("success", "去转义成功");
       break;
     case "unicodeToChinese":
       jsonText.value = unicodeToChinese(jsonText.value);
+      showMessage("success", "Unicode 转中文成功");
       break;
     case "chineseToUnicode":
       jsonText.value = chineseToUnicode(jsonText.value);
+      showMessage("success", "中文 转 Unicode 成功");
       break;
     case "clear":
       jsonText.value = "";
+      showMessage("success", "已清空内容");
       break;
     case "copy":
       navigator.clipboard.writeText(jsonText.value);

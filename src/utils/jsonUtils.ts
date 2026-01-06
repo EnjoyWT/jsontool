@@ -36,16 +36,12 @@ export const formatJson = (text: string): string => {
 };
 
 export const minifyJson = (text: string): string => {
-  try {
-    const obj = JSON.parse(text);
-    return JSON.stringify(obj);
-  } catch (e) {
-    return text;
-  }
+  const obj = JSON.parse(text);
+  return JSON.stringify(obj);
 };
 
 export const validateJson = (text: string): ValidationResult => {
-  if (!text.trim()) return { valid: true };
+  if (!text.trim()) return { valid: false, error: '内容为空' };
   try {
     jsonlint.parse(text);
     return { valid: true };
@@ -63,40 +59,28 @@ export const validateJson = (text: string): ValidationResult => {
 };
 
 export const sortJsonKeys = (text: string): string => {
-  try {
-    const obj = JSON.parse(text);
-    const sortObj = (item: any): any => {
-      if (Array.isArray(item)) return item.map(sortObj);
-      if (item !== null && typeof item === 'object') {
-        return Object.keys(item).sort().reduce((acc: any, key) => {
-          acc[key] = sortObj(item[key]);
-          return acc;
-        }, {});
-      }
-      return item;
-    };
-    return JSON.stringify(sortObj(obj), null, 2);
-  } catch (e) {
-    return text;
-  }
+  const obj = JSON.parse(text);
+  const sortObj = (item: any): any => {
+    if (Array.isArray(item)) return item.map(sortObj);
+    if (item !== null && typeof item === 'object') {
+      return Object.keys(item).sort().reduce((acc: any, key) => {
+        acc[key] = sortObj(item[key]);
+        return acc;
+      }, {});
+    }
+    return item;
+  };
+  return JSON.stringify(sortObj(obj), null, 2);
 };
 
 export const jsonToYaml = (text: string): string => {
-  try {
-    const obj = JSON.parse(text);
-    return yaml.dump(obj);
-  } catch (e) {
-    return "Error converting to YAML: Invalid JSON";
-  }
+  const obj = JSON.parse(text);
+  return yaml.dump(obj);
 };
 
 export const jsonToXml = (text: string): string => {
-  try {
-    const obj = JSON.parse(text);
-    return convert.js2xml(obj, { compact: true, spaces: 2 });
-  } catch (e) {
-    return "Error converting to XML: Invalid JSON. (Ensure JSON structure is compatible with XML, e.g., single root element)";
-  }
+  const obj = JSON.parse(text);
+  return convert.js2xml(obj, { compact: true, spaces: 2 });
 };
 
 export const escapeJson = (text: string): string => {
