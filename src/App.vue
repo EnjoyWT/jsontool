@@ -4,6 +4,7 @@ import Toolbar from "./components/Toolbar.vue";
 import EditorActions from "./components/EditorActions.vue";
 import JsonEditor from "./components/JsonEditor.vue";
 import TreeView from "./components/TreeView.vue";
+import HistorySidebar, { type HistoryItem } from "./components/HistorySidebar.vue";
 import { CheckCircle2, AlertCircle, X } from "lucide-vue-next";
 import {
   formatJson,
@@ -28,6 +29,72 @@ const message = ref<{ type: "success" | "error"; text: string } | null>(null);
 const errorLine = ref<number | undefined>(undefined);
 const errorColumn = ref<number | undefined>(undefined);
 const errorMessage = ref<string | undefined>(undefined);
+
+// 历史记录状态
+const showHistory = ref(false);
+const historyItems = ref<HistoryItem[]>([]);
+const MAX_HISTORY = 30;
+
+// 加载历史记录
+const loadHistory = () => {
+  const saved = localStorage.getItem("json_tool_history");
+  if (saved) {
+    try {
+      historyItems.value = JSON.parse(saved);
+    } catch (e) {
+      console.error("Failed to load history", e);
+    }
+  }
+};
+
+// 保存历史记录到本地
+const saveHistoryToLocal = () => {
+  localStorage.setItem("json_tool_history", JSON.stringify(historyItems.value));
+};
+
+// 添加历史记录
+const addToHistory = (content: string) => {
+  if (!content.trim()) return;
+  
+  // 检查是否与最近一条相同
+  if (historyItems.value.length > 0 && historyItems.value[0].content === content) {
+    return;
+  }
+
+  const newItem: HistoryItem = {
+    id: Date.now().toString(),
+    content: content,
+    timestamp: Date.now(),
+    size: new Blob([content]).size,
+  };
+
+  historyItems.value.unshift(newItem);
+  
+  // 限制数量
+  if (historyItems.value.length > MAX_HISTORY) {
+    historyItems.value = historyItems.value.slice(0, MAX_HISTORY);
+  }
+
+  saveHistoryToLocal();
+};
+
+const deleteHistoryItem = (id: string) => {
+  historyItems.value = historyItems.value.filter(item => item.id !== id);
+  saveHistoryToLocal();
+};
+
+const clearHistory = () => {
+  if (confirm("确定要清空所有历史记录吗？")) {
+    historyItems.value = [];
+    saveHistoryToLocal();
+    showMessage("success", "历史记录已清空");
+  }
+};
+
+const selectHistoryItem = (content: string) => {
+  jsonText.value = content;
+  showMessage("success", "已加载历史记录");
+};
 
 // 实时校验 JSON
 const validateAndMark = () => {
@@ -86,6 +153,7 @@ const onDrag = (e: MouseEvent) => {
 onMounted(() => {
   document.addEventListener("mousemove", onDrag);
   document.addEventListener("mouseup", stopDragging);
+  loadHistory();
 });
 
 onBeforeUnmount(() => {
@@ -124,6 +192,7 @@ const handleAction = (action: string) => {
       if (formatResult.valid) {
         jsonText.value = formatJson(jsonText.value);
         showMessage("success", "JSON 格式化成功");
+        addToHistory(jsonText.value);
       } else {
         // 尝试尽可能格式化，但提示错误
         try {
@@ -159,6 +228,7 @@ const handleAction = (action: string) => {
         try {
           jsonText.value = minifyJson(jsonText.value);
           showMessage("success", "JSON 压缩成功");
+          addToHistory(jsonText.value);
         } catch (e: any) {
           showMessage("error", `JSON 压缩失败: ${e.message || "未知错误"}`);
         }
@@ -198,6 +268,7 @@ const handleAction = (action: string) => {
         try {
           jsonText.value = jsonToYaml(jsonText.value);
           showMessage("success", "已成功转为 YAML");
+          addToHistory(jsonText.value);
         } catch (e: any) {
           showMessage("error", `转为 YAML 失败: ${e.message || "未知错误"}`);
         }
@@ -211,6 +282,7 @@ const handleAction = (action: string) => {
         try {
           jsonText.value = jsonToXml(jsonText.value);
           showMessage("success", "已成功转为 XML");
+          addToHistory(jsonText.value);
         } catch (e: any) {
           showMessage("error", `转为 XML 失败: ${e.message || "未知错误"}`);
         }
@@ -259,85 +331,119 @@ const handleAction = (action: string) => {
 <template>
   <div class="flex flex-col h-screen overflow-hidden bg-[var(--color-bg-base)]">
     <!-- Top-level TabBar -->
-    <Toolbar />
+    <Toolbar :showHistory="showHistory" @toggleHistory="showHistory = !showHistory" />
 
-    <!-- Main Content: Split Pane -->
-    <main class="flex-1 flex overflow-hidden p-3 gap-0" ref="containerRef">
-      <!-- Left Pane: Editor -->
-      <div
-        class="flex flex-col min-w-0 bg-[var(--color-bg-card)] rounded-l-xl shadow-sm border border-[var(--color-border)] border-r-0 overflow-hidden"
-        :style="{ width: `${leftPaneWidth}%` }"
-      >
+    <!-- Main Content: Sidebar + Split Pane -->
+    <div class="flex-1 flex overflow-hidden p-3">
+      <!-- History Sidebar -->
+      <transition name="sidebar">
+        <HistorySidebar 
+          v-if="showHistory" 
+          class="sidebar-component"
+          :items="historyItems"
+          @select="selectHistoryItem"
+          @delete="deleteHistoryItem"
+          @clear="clearHistory"
+          @refresh="loadHistory"
+          @close="showHistory = false"
+        />
+      </transition>
+
+      <!-- Split Pane -->
+      <main class="flex-1 flex overflow-hidden gap-0" ref="containerRef">
+        <!-- Left Pane: Editor -->
         <div
-          class="flex items-center justify-between px-3 py-1.5 border-b border-[var(--color-border)] bg-[var(--color-bg-base)]"
+          class="flex flex-col min-w-0 bg-[var(--color-bg-card)] rounded-l-xl shadow-sm border border-[var(--color-border)] border-r-0 overflow-hidden"
+          :style="{ width: `${leftPaneWidth}%` }"
         >
-          <div class="flex items-center gap-4">
-            <span class="text-sm font-bold text-[var(--color-text-primary)]"
-              >编辑器</span
-            >
-            <!-- Integrated Action Group -->
-            <EditorActions
-              @format="handleAction('format')"
-              @minify="handleAction('minify')"
-              @verify="handleAction('verify')"
-              @sort="handleAction('sort')"
-              @toYaml="handleAction('toYaml')"
-              @toXml="handleAction('toXml')"
-              @escape="handleAction('escape')"
-              @unescape="handleAction('unescape')"
-              @unicodeToChinese="handleAction('unicodeToChinese')"
-              @chineseToUnicode="handleAction('chineseToUnicode')"
-              @clear="handleAction('clear')"
-              @copy="handleAction('copy')"
-              @download="handleAction('download')"
+          <div
+            class="flex items-center justify-between px-3 py-1.5 border-b border-[var(--color-border)] bg-[var(--color-bg-base)]"
+          >
+            <div class="flex items-center gap-2">
+              <!-- Sidebar Toggle (Always occupies space for visual stability) -->
+              <button 
+                @click="showHistory = true"
+                :class="[
+                  'p-1.5 hover:bg-[var(--color-btn-bg)] rounded transition-all duration-200',
+                  showHistory ? 'opacity-0 pointer-events-none' : 'text-[var(--color-text-muted)] hover:text-[var(--color-primary)]'
+                ]"
+                title="打开历史记录"
+              >
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 20 20">
+                  <g>
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M2.167 6.667A2.833 2.833 0 0 1 5 3.833h2.708v12.334H5a2.833 2.833 0 0 1-2.833-2.834V6.667ZM9.042 17.5H5a4.167 4.167 0 0 1-4.167-4.167V6.667A4.167 4.167 0 0 1 5 2.5h10a4.167 4.167 0 0 1 4.167 4.167v6.666A4.167 4.167 0 0 1 15 17.5H9.042Zm0-13.667H15a2.833 2.833 0 0 1 2.833 2.834v6.666A2.833 2.833 0 0 1 15 16.167H9.042V3.833ZM3.583 6.5c0-.368.336-.667.75-.667H5.75c.414 0 .75.299.75.667 0 .368-.336.667-.75.667H4.333c-.414 0-.75-.299-.75-.667Zm.75 1.833c-.414 0-.75.299-.75.667 0 .368.336.667.75.667H5.75c.414 0 .75-.299.75-.667 0-.368-.336-.667-.75-.667H4.333Z" fill="currentColor"></path>
+                  </g>
+                </svg>
+              </button>
+              <span class="text-sm font-bold text-[var(--color-text-primary)]"
+                >编辑器</span
+              >
+              <!-- Integrated Action Group -->
+              <EditorActions
+                @format="handleAction('format')"
+                @minify="handleAction('minify')"
+                @verify="handleAction('verify')"
+                @sort="handleAction('sort')"
+                @toYaml="handleAction('toYaml')"
+                @toXml="handleAction('toXml')"
+                @escape="handleAction('escape')"
+                @unescape="handleAction('unescape')"
+                @unicodeToChinese="handleAction('unicodeToChinese')"
+                @chineseToUnicode="handleAction('chineseToUnicode')"
+                @clear="handleAction('clear')"
+                @copy="handleAction('copy')"
+                @download="handleAction('download')"
+              />
+            </div>
+            <span class="text-[10px] font-mono text-[var(--color-text-muted)]">
+              {{ jsonText.split("\n").length }} 行 ·
+              {{ (jsonText.length / 1024).toFixed(2) }} KB
+            </span>
+          </div>
+          <div class="flex-1 overflow-hidden">
+            <JsonEditor
+              v-model="jsonText"
+              :errorLine="errorLine"
+              :errorColumn="errorColumn"
+              :errorMessage="errorMessage"
             />
           </div>
-          <span class="text-[10px] font-mono text-[var(--color-text-muted)]">
-            {{ jsonText.split("\n").length }} 行 ·
-            {{ (jsonText.length / 1024).toFixed(2) }} KB
-          </span>
         </div>
-        <div class="flex-1 overflow-hidden">
-          <JsonEditor
-            v-model="jsonText"
-            :errorLine="errorLine"
-            :errorColumn="errorColumn"
-            :errorMessage="errorMessage"
-          />
-        </div>
-      </div>
 
-      <!-- Resize Handle -->
-      <div
-        class="resize-handle"
-        :class="{ dragging: isDragging }"
-        @mousedown.prevent="startDragging"
-      ></div>
-
-      <!-- Right Pane: Tree View -->
-      <div
-        class="flex flex-col min-w-0 bg-[var(--color-bg-card)] rounded-r-xl shadow-sm border border-[var(--color-border)] border-l-0 overflow-hidden"
-        :style="{ width: `${100 - leftPaneWidth}%` }"
-      >
+        <!-- Resize Handle -->
         <div
-          class="flex items-center px-4 py-1.5 border-b border-[var(--color-border)] bg-[var(--color-bg-base)] h-[37px]"
+          class="resize-handle"
+          :class="{ dragging: isDragging }"
+          @mousedown.prevent="startDragging"
+        ></div>
+
+        <!-- Right Pane: Tree View -->
+        <div
+          class="flex flex-col min-w-0 bg-[var(--color-bg-card)] rounded-r-xl shadow-sm border border-[var(--color-border)] border-l-0 overflow-hidden"
+          :style="{ width: `${100 - leftPaneWidth}%` }"
         >
-          <span class="text-sm font-medium text-[var(--color-text-secondary)]"
-            >预览</span
+          <div
+            class="flex items-center px-4 py-1.5 border-b border-[var(--color-border)] bg-[var(--color-bg-base)] h-[37px]"
           >
+            <span class="text-sm font-medium text-[var(--color-text-secondary)]"
+              >预览</span
+            >
+          </div>
+          <div class="flex-1 overflow-hidden">
+            <TreeView :jsonText="jsonText" />
+          </div>
         </div>
-        <div class="flex-1 overflow-hidden">
-          <TreeView :jsonText="jsonText" />
-        </div>
-      </div>
-    </main>
+      </main>
+    </div>
+  </div>
 
-    <!-- Toast Messages -->
-    <transition name="toast">
-      <div v-if="message" class="fixed top-20 left-1/2 -translate-x-1/2 z-50">
+  <!-- Toast Messages -->
+    <div class="fixed top-20 left-0 right-0 flex justify-center z-50 pointer-events-none">
+      <transition name="toast">
         <div
+          v-if="message"
           :class="[
-            'flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg',
+            'flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg pointer-events-auto',
             message.type === 'success'
               ? 'bg-[var(--color-success-bg)] text-[var(--color-success)]'
               : 'bg-[var(--color-error-bg)] text-[var(--color-error)]',
@@ -356,7 +462,45 @@ const handleAction = (action: string) => {
             <X class="w-4 h-4" />
           </button>
         </div>
-      </div>
-    </transition>
-  </div>
+      </transition>
+    </div>
 </template>
+
+<style>
+/* Sidebar Transition */
+.sidebar-enter-active,
+.sidebar-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sidebar-enter-from,
+.sidebar-leave-to {
+  width: 0 !important;
+  margin-right: 0 !important;
+  opacity: 0;
+  transform: translateX(-100%);
+}
+
+.sidebar-component {
+  margin-right: 12px; /* 相当于之前的 gap-3 */
+}
+
+/* Toast Transition */
+.toast-enter-active,
+.toast-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+.toast-enter-to,
+.toast-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+</style>

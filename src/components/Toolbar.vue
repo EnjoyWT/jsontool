@@ -1,10 +1,16 @@
 <script setup lang="ts">
-import { LayoutGrid } from "lucide-vue-next";
+import { LayoutPanelLeft } from "lucide-vue-next";
+
+defineProps<{
+  showHistory: boolean;
+}>();
+
+defineEmits(["toggleHistory"]);
 </script>
 
 <template>
   <div
-    class="flex items-center gap-4 px-4 py-2 bg-[var(--color-bg-card)] border-b border-[var(--color-border)]"
+    class="flex items-center justify-between px-4 py-2 bg-[var(--color-bg-card)] border-b border-[var(--color-border)]"
   >
     <!-- Tabs Container -->
     <div class="flex items-center gap-1 overflow-x-auto no-scrollbar">
@@ -18,6 +24,10 @@ import { LayoutGrid } from "lucide-vue-next";
       <div
         class="px-3 py-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] rounded-md cursor-pointer transition-colors"
       ></div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center">
     </div>
   </div>
 </template>
