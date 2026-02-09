@@ -7,6 +7,7 @@ export interface HistoryItem {
   content: string;
   timestamp: number;
   size: number;
+  format?: "json" | "yaml" | "xml" | "text";
 }
 
 const props = defineProps<{
@@ -119,7 +120,10 @@ onBeforeUnmount(() => {
     <div class="mx-3 border-b border-[var(--color-border)]"></div>
 
     <!-- List -->
-    <div class="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
+    <div
+      class="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar"
+      :key="lastUpdate"
+    >
       <div
         v-if="items.length === 0"
         class="flex flex-col items-center justify-center h-full text-[var(--color-text-muted)] opacity-50"
@@ -131,7 +135,7 @@ onBeforeUnmount(() => {
       <div
         v-for="item in items"
         :key="item.id"
-        @click="$emit('select', item.content)"
+        @click="$emit('select', item)"
         class="group relative p-3 bg-white border border-[var(--color-border)] rounded-lg hover:border-[var(--color-primary)] hover:shadow-sm cursor-pointer transition-all duration-200"
       >
         <div class="flex flex-col gap-1.5 pr-6">

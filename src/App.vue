@@ -6,6 +6,8 @@ import JsonEditor from "./components/JsonEditor.vue";
 import TreeView from "./components/TreeView.vue";
 import HistorySidebar, { type HistoryItem } from "./components/HistorySidebar.vue";
 import { CheckCircle2, AlertCircle, X } from "lucide-vue-next";
+import yaml from "js-yaml";
+import convert from "xml-js";
 import {
   formatJson,
   minifyJson,
@@ -15,13 +17,15 @@ import {
   unicodeToChinese,
   chineseToUnicode,
   sortJsonKeys,
-  jsonToYaml,
-  jsonToXml,
 } from "./utils/jsonUtils";
+
+type ContentFormat = "json" | "yaml" | "xml" | "text";
 
 const jsonText = ref(
   '{\n  "name": "JSON Tool",\n  "version": "2.0.0",\n  "description": "现代简约风格的 JSON 工具",\n  "features": [\n    "格式化与压缩",\n    "实时预览",\n    "格式转换",\n    "语法校验"\n  ],\n  "author": "Alma"\n}'
 );
+
+const contentFormat = ref<ContentFormat>("json");
 
 const message = ref<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -35,12 +39,81 @@ const showHistory = ref(false);
 const historyItems = ref<HistoryItem[]>([]);
 const MAX_HISTORY = 30;
 
+const detectFormat = (content: string): ContentFormat => {
+  try {
+    JSON.parse(content);
+    return "json";
+  } catch (e) {
+    const trimmed = content.trim();
+    if (trimmed.startsWith("<?xml") || /^<[^>\s]+>/.test(trimmed)) return "xml";
+    try {
+      const doc = yaml.load(content);
+      if (doc && typeof doc === "object") return "yaml";
+    } catch (err) {
+      // ignore yaml parse errors for detection
+    }
+    return "text";
+  }
+};
+
+const parseContent = (text: string, format: ContentFormat) => {
+  switch (format) {
+    case "json": {
+      const result = validateJson(text);
+      if (!result.valid) {
+        const loc = result.line ? ` (行: ${result.line}, 列: ${result.column})` : "";
+        throw new Error(`JSON 格式错误: ${result.error || "未知错误"}${loc}`);
+      }
+      return JSON.parse(text);
+    }
+    case "yaml": {
+      const doc = yaml.load(text);
+      if (doc === undefined) throw new Error("YAML 内容为空");
+      return doc;
+    }
+    case "xml":
+      return convert.xml2js(text, { compact: true });
+    default:
+      throw new Error("当前内容不是可解析的结构化数据");
+  }
+};
+
+const stringifyContent = (obj: any, format: ContentFormat, compact = false) => {
+  switch (format) {
+    case "json":
+      return compact ? JSON.stringify(obj) : JSON.stringify(obj, null, 2);
+    case "yaml":
+      return yaml.dump(obj);
+    case "xml":
+      return convert.js2xml(obj, { compact: true, spaces: compact ? 0 : 2 });
+    default:
+      return String(obj ?? "");
+  }
+};
+
+const sortObjectKeys = (value: any): any => {
+  if (Array.isArray(value)) return value.map(sortObjectKeys);
+  if (value !== null && typeof value === "object") {
+    return Object.keys(value)
+      .sort()
+      .reduce((acc: any, key) => {
+        acc[key] = sortObjectKeys(value[key]);
+        return acc;
+      }, {});
+  }
+  return value;
+};
+
 // 加载历史记录
 const loadHistory = () => {
   const saved = localStorage.getItem("json_tool_history");
   if (saved) {
     try {
-      historyItems.value = JSON.parse(saved);
+      const parsed: HistoryItem[] = JSON.parse(saved);
+      historyItems.value = parsed.map((item) => ({
+        ...item,
+        format: item.format ?? detectFormat(item.content),
+      }));
     } catch (e) {
       console.error("Failed to load history", e);
     }
@@ -66,6 +139,7 @@ const addToHistory = (content: string) => {
     content: content,
     timestamp: Date.now(),
     size: new Blob([content]).size,
+    format: contentFormat.value,
   };
 
   historyItems.value.unshift(newItem);
@@ -89,13 +163,14 @@ const clearHistory = () => {
   showMessage("success", "历史记录已清空");
 };
 
-const selectHistoryItem = (content: string) => {
-  jsonText.value = content;
+const selectHistoryItem = (item: HistoryItem) => {
+  jsonText.value = item.content;
+  contentFormat.value = item.format ?? detectFormat(item.content);
 };
 
 // 实时校验 JSON
 const validateAndMark = () => {
-  if (!jsonText.value.trim()) {
+  if (!jsonText.value.trim() || contentFormat.value !== "json") {
     errorLine.value = undefined;
     errorColumn.value = undefined;
     errorMessage.value = undefined;
@@ -184,107 +259,169 @@ const handleAction = (action: string) => {
 
   switch (action) {
     case "format":
-      // 先校验，有错误提示，尽可能格式化
-      const formatResult = validateJson(jsonText.value);
-      if (formatResult.valid) {
-        jsonText.value = formatJson(jsonText.value);
-        showMessage("success", "JSON 格式化成功");
-        addToHistory(jsonText.value);
-      } else {
-        // 尝试尽可能格式化，但提示错误
-        try {
-          const formatted = formatJson(jsonText.value);
-          if (formatted === jsonText.value && !formatResult.valid) {
-             showMessage("error", `JSON 格式错误，无法格式化: ${formatResult.error}`);
-          } else {
-            jsonText.value = formatted;
+      if (contentFormat.value === "json") {
+        // 先校验，有错误提示，尽可能格式化
+        const formatResult = validateJson(jsonText.value);
+        if (formatResult.valid) {
+          jsonText.value = formatJson(jsonText.value);
+          showMessage("success", "JSON 格式化成功");
+          addToHistory(jsonText.value);
+        } else {
+          // 尝试尽可能格式化，但提示错误
+          try {
+            const formatted = formatJson(jsonText.value);
+            if (formatted === jsonText.value && !formatResult.valid) {
+               showMessage("error", `JSON 格式错误，无法格式化: ${formatResult.error}`);
+            } else {
+              jsonText.value = formatted;
+              showMessage(
+                "error",
+                `JSON 存在错误: ${formatResult.error}${
+                  formatResult.line
+                    ? ` (行: ${formatResult.line}, 列: ${formatResult.column})`
+                    : ""
+                }`
+              );
+            }
+          } catch {
             showMessage(
               "error",
-              `JSON 存在错误: ${formatResult.error}${
+              `JSON 格式错误，无法格式化: ${formatResult.error}${
                 formatResult.line
                   ? ` (行: ${formatResult.line}, 列: ${formatResult.column})`
                   : ""
               }`
             );
           }
-        } catch {
+        }
+        break;
+      }
+
+      if (contentFormat.value === "yaml" || contentFormat.value === "xml") {
+        try {
+          const obj = parseContent(jsonText.value, contentFormat.value);
+          jsonText.value = stringifyContent(obj, contentFormat.value, false);
+          showMessage("success", `${contentFormat.value.toUpperCase()} 格式化成功`);
+          addToHistory(jsonText.value);
+        } catch (e: any) {
+          showMessage("error", `${contentFormat.value.toUpperCase()} 格式错误: ${e.message || e}`);
+        }
+        break;
+      }
+
+      showMessage("error", "当前内容不是可格式化的结构化数据");
+      break;
+    case "minify":
+      if (contentFormat.value === "json") {
+        const minifyResult = validateJson(jsonText.value);
+        if (minifyResult.valid) {
+          try {
+            jsonText.value = minifyJson(jsonText.value);
+            showMessage("success", "JSON 压缩成功");
+            addToHistory(jsonText.value);
+          } catch (e: any) {
+            showMessage("error", `JSON 压缩失败: ${e.message || "未知错误"}`);
+          }
+        } else {
+          showMessage("error", `JSON 格式错误，无法压缩: ${minifyResult.error}`);
+        }
+        break;
+      }
+
+      if (contentFormat.value === "xml") {
+        try {
+          const obj = parseContent(jsonText.value, "xml");
+          jsonText.value = stringifyContent(obj, "xml", true);
+          showMessage("success", "XML 压缩成功");
+          addToHistory(jsonText.value);
+        } catch (e: any) {
+          showMessage("error", `XML 压缩失败: ${e.message || e}`);
+        }
+        break;
+      }
+
+      showMessage("error", "当前格式暂不支持压缩");
+      break;
+    case "verify":
+      if (contentFormat.value === "json") {
+        const result = validateJson(jsonText.value);
+        if (result.valid) {
+          showMessage("success", "JSON 格式验证通过");
+        } else {
           showMessage(
             "error",
-            `JSON 格式错误，无法格式化: ${formatResult.error}${
-              formatResult.line
-                ? ` (行: ${formatResult.line}, 列: ${formatResult.column})`
-                : ""
+            `JSON 格式错误: ${result.error}${
+              result.line ? ` (行: ${result.line}, 列: ${result.column})` : ""
             }`
           );
         }
+        break;
       }
-      break;
-    case "minify":
-      const minifyResult = validateJson(jsonText.value);
-      if (minifyResult.valid) {
+
+      if (contentFormat.value === "yaml" || contentFormat.value === "xml") {
         try {
-          jsonText.value = minifyJson(jsonText.value);
-          showMessage("success", "JSON 压缩成功");
-          addToHistory(jsonText.value);
+          parseContent(jsonText.value, contentFormat.value);
+          showMessage("success", `${contentFormat.value.toUpperCase()} 格式验证通过`);
         } catch (e: any) {
-          showMessage("error", `JSON 压缩失败: ${e.message || "未知错误"}`);
+          showMessage("error", `${contentFormat.value.toUpperCase()} 格式错误: ${e.message || e}`);
         }
-      } else {
-        showMessage("error", `JSON 格式错误，无法压缩: ${minifyResult.error}`);
+        break;
       }
-      break;
-    case "verify":
-      const result = validateJson(jsonText.value);
-      if (result.valid) {
-        showMessage("success", "JSON 格式验证通过");
-      } else {
-        showMessage(
-          "error",
-          `JSON 格式错误: ${result.error}${
-            result.line ? ` (行: ${result.line}, 列: ${result.column})` : ""
-          }`
-        );
-      }
+
+      showMessage("error", "当前内容不是可验证的结构化数据");
       break;
     case "sort":
-      const sortResult = validateJson(jsonText.value);
-      if (sortResult.valid) {
-        try {
-          jsonText.value = sortJsonKeys(jsonText.value);
-          showMessage("success", "JSON 键名排序成功");
-        } catch (e: any) {
-          showMessage("error", `排序失败: ${e.message || "未知错误"}`);
+      if (contentFormat.value === "json") {
+        const sortResult = validateJson(jsonText.value);
+        if (sortResult.valid) {
+          try {
+            jsonText.value = sortJsonKeys(jsonText.value);
+            showMessage("success", "JSON 键名排序成功");
+            addToHistory(jsonText.value);
+          } catch (e: any) {
+            showMessage("error", `排序失败: ${e.message || "未知错误"}`);
+          }
+        } else {
+          showMessage("error", `JSON 格式错误，无法排序: ${sortResult.error}`);
         }
-      } else {
-        showMessage("error", `JSON 格式错误，无法排序: ${sortResult.error}`);
+        break;
       }
-      break;
-    case "toYaml":
-      const yamlResult = validateJson(jsonText.value);
-      if (yamlResult.valid) {
+
+      if (contentFormat.value === "yaml") {
         try {
-          jsonText.value = jsonToYaml(jsonText.value);
-          showMessage("success", "已成功转为 YAML");
+          const obj = parseContent(jsonText.value, "yaml");
+          const sorted = sortObjectKeys(obj);
+          jsonText.value = stringifyContent(sorted, "yaml", false);
+          showMessage("success", "YAML 键名排序成功");
           addToHistory(jsonText.value);
         } catch (e: any) {
-          showMessage("error", `转为 YAML 失败: ${e.message || "未知错误"}`);
+          showMessage("error", `YAML 排序失败: ${e.message || e}`);
         }
-      } else {
-        showMessage("error", `JSON 格式错误，无法转换: ${yamlResult.error}`);
+        break;
+      }
+
+      showMessage("error", "当前格式暂不支持键名排序");
+      break;
+    case "toYaml":
+      try {
+        const obj = parseContent(jsonText.value, contentFormat.value);
+        jsonText.value = stringifyContent(obj, "yaml", false);
+        contentFormat.value = "yaml";
+        showMessage("success", "已成功转为 YAML");
+        addToHistory(jsonText.value);
+      } catch (e: any) {
+        showMessage("error", `转为 YAML 失败: ${e.message || e}`);
       }
       break;
     case "toXml":
-      const xmlResult = validateJson(jsonText.value);
-      if (xmlResult.valid) {
-        try {
-          jsonText.value = jsonToXml(jsonText.value);
-          showMessage("success", "已成功转为 XML");
-          addToHistory(jsonText.value);
-        } catch (e: any) {
-          showMessage("error", `转为 XML 失败: ${e.message || "未知错误"}`);
-        }
-      } else {
-        showMessage("error", `JSON 格式错误，无法转换: ${xmlResult.error}`);
+      try {
+        const obj = parseContent(jsonText.value, contentFormat.value);
+        jsonText.value = stringifyContent(obj, "xml", false);
+        contentFormat.value = "xml";
+        showMessage("success", "已成功转为 XML");
+        addToHistory(jsonText.value);
+      } catch (e: any) {
+        showMessage("error", `转为 XML 失败: ${e.message || e}`);
       }
       break;
     case "escape":
@@ -305,6 +442,7 @@ const handleAction = (action: string) => {
       break;
     case "clear":
       jsonText.value = "";
+      contentFormat.value = "json";
       showMessage("success", "已清空内容");
       break;
     case "copy":
@@ -312,11 +450,24 @@ const handleAction = (action: string) => {
       showMessage("success", "已复制到剪贴板");
       break;
     case "download":
-      const blob = new Blob([jsonText.value], { type: "application/json" });
+      const getDownloadMeta = (format: ContentFormat) => {
+        switch (format) {
+          case "yaml":
+            return { filename: "data.yaml", mime: "application/x-yaml" };
+          case "xml":
+            return { filename: "data.xml", mime: "application/xml" };
+          case "text":
+            return { filename: "data.txt", mime: "text/plain" };
+          default:
+            return { filename: "data.json", mime: "application/json" };
+        }
+      };
+      const { filename, mime } = getDownloadMeta(contentFormat.value);
+      const blob = new Blob([jsonText.value], { type: mime });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "data.json";
+      link.download = filename;
       link.click();
       URL.revokeObjectURL(url);
       showMessage("success", "下载已启动");
@@ -427,7 +578,7 @@ const handleAction = (action: string) => {
             >
           </div>
           <div class="flex-1 overflow-hidden">
-            <TreeView :jsonText="jsonText" />
+            <TreeView :jsonText="jsonText" :format="contentFormat" />
           </div>
         </div>
       </main>
