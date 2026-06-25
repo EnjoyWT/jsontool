@@ -13,7 +13,9 @@ import {
   minifyJson,
   validateJson,
   escapeJson,
-  unescapeJson,
+  smartUnescapeJsonString,
+  urlDecode,
+  urlEncode,
   unicodeToChinese,
   chineseToUnicode,
   sortJsonKeys,
@@ -243,7 +245,7 @@ const handleAction = (action: string) => {
 
   // 检查内容是否为空
   if (!jsonText.value.trim() && action !== "clear") {
-    if (["format", "minify", "verify", "sort", "toYaml", "toXml", "escape", "unescape", "unicodeToChinese", "chineseToUnicode"].includes(action)) {
+    if (["format", "minify", "verify", "sort", "toYaml", "toXml", "escape", "smartUnescape", "urlEncode", "urlDecode", "unicodeToChinese", "chineseToUnicode"].includes(action)) {
       showMessage("error", "请输入内容");
       return;
     }
@@ -428,9 +430,27 @@ const handleAction = (action: string) => {
       jsonText.value = escapeJson(jsonText.value);
       showMessage("success", "转义成功");
       break;
-    case "unescape":
-      jsonText.value = unescapeJson(jsonText.value);
-      showMessage("success", "去转义成功");
+    case "smartUnescape":
+      jsonText.value = smartUnescapeJsonString(jsonText.value);
+      contentFormat.value = detectFormat(jsonText.value);
+      showMessage("success", "智能去转义成功");
+      addToHistory(jsonText.value);
+      break;
+    case "urlEncode":
+      jsonText.value = urlEncode(jsonText.value);
+      contentFormat.value = "text";
+      showMessage("success", "URL 编码成功");
+      addToHistory(jsonText.value);
+      break;
+    case "urlDecode":
+      try {
+        jsonText.value = urlDecode(jsonText.value);
+        contentFormat.value = detectFormat(jsonText.value);
+        showMessage("success", "URL 解码成功");
+        addToHistory(jsonText.value);
+      } catch (e: any) {
+        showMessage("error", e.message || "URL 解码失败");
+      }
       break;
     case "unicodeToChinese":
       jsonText.value = unicodeToChinese(jsonText.value);
@@ -535,7 +555,9 @@ const handleAction = (action: string) => {
                 @toYaml="handleAction('toYaml')"
                 @toXml="handleAction('toXml')"
                 @escape="handleAction('escape')"
-                @unescape="handleAction('unescape')"
+                @smartUnescape="handleAction('smartUnescape')"
+                @urlEncode="handleAction('urlEncode')"
+                @urlDecode="handleAction('urlDecode')"
                 @unicodeToChinese="handleAction('unicodeToChinese')"
                 @chineseToUnicode="handleAction('chineseToUnicode')"
                 @clear="handleAction('clear')"

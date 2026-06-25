@@ -87,8 +87,52 @@ export const escapeJson = (text: string): string => {
   return text.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
 };
 
-export const unescapeJson = (text: string): string => {
-  return text.replace(/\\"/g, "\"").replace(/\\\\/g, "\\");
+const tryFormatJsonText = (text: string): string | null => {
+  try {
+    return JSON.stringify(JSON.parse(text), null, 2);
+  } catch {
+    return null;
+  }
+};
+
+const unescapeJsonStringContent = (text: string): string => {
+  try {
+    return JSON.parse(`"${text}"`);
+  } catch {
+    return text
+      .replace(/\\r/g, "\r")
+      .replace(/\\n/g, "\n")
+      .replace(/\\t/g, "\t")
+      .replace(/\\"/g, "\"")
+      .replace(/\\\\/g, "\\");
+  }
+};
+
+export const smartUnescapeJsonString = (text: string): string => {
+  const trimmed = text.trim();
+  const formattedOriginal = tryFormatJsonText(trimmed);
+
+  if (formattedOriginal) {
+    const parsed = JSON.parse(trimmed);
+    if (typeof parsed !== "string") return formattedOriginal;
+
+    return tryFormatJsonText(parsed.trim()) ?? parsed;
+  }
+
+  const unescaped = unescapeJsonStringContent(text);
+  return tryFormatJsonText(unescaped.trim()) ?? unescaped;
+};
+
+export const urlEncode = (text: string): string => {
+  return encodeURIComponent(text);
+};
+
+export const urlDecode = (text: string): string => {
+  try {
+    return decodeURIComponent(text);
+  } catch {
+    throw new Error("URL 编码格式错误，无法解码");
+  }
 };
 
 export const unicodeToChinese = (text: string): string => {

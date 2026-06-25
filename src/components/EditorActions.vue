@@ -9,9 +9,11 @@ import {
   Code2,
   Binary,
   FileCode,
-  FileText,
   Globe,
   Languages,
+  Link,
+  Unlink,
+  WandSparkles,
 } from "lucide-vue-next";
 import FormatIcon from "./icons/FormatIcon.vue";
 import MinifyIcon from "./icons/MinifyIcon.vue";
@@ -21,7 +23,9 @@ defineEmits([
   "minify",
   "verify",
   "escape",
-  "unescape",
+  "smartUnescape",
+  "urlEncode",
+  "urlDecode",
   "unicodeToChinese",
   "chineseToUnicode",
   "clear",
@@ -121,6 +125,24 @@ defineEmits([
             排序键名
           </button>
           <div class="my-1 border-t border-[var(--color-border)]"></div>
+          <button @click="$emit('escape')" class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-btn-bg)] transition-colors text-left">
+            <FileCode class="w-3.5 h-3.5" />
+            转义
+          </button>
+          <button @click="$emit('smartUnescape')" class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-btn-bg)] transition-colors text-left">
+            <WandSparkles class="w-3.5 h-3.5" />
+            智能去转义
+          </button>
+          <div class="my-1 border-t border-[var(--color-border)]"></div>
+          <button @click="$emit('urlEncode')" class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-btn-bg)] transition-colors text-left">
+            <Link class="w-3.5 h-3.5" />
+            URL 编码
+          </button>
+          <button @click="$emit('urlDecode')" class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-btn-bg)] transition-colors text-left">
+            <Unlink class="w-3.5 h-3.5" />
+            URL 解码
+          </button>
+          <div class="my-1 border-t border-[var(--color-border)]"></div>
           <button @click="$emit('toYaml')" class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-btn-bg)] transition-colors text-left">
             <Code2 class="w-3.5 h-3.5" />
             转为 YAML
@@ -128,15 +150,6 @@ defineEmits([
           <button @click="$emit('toXml')" class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-btn-bg)] transition-colors text-left">
             <Binary class="w-3.5 h-3.5" />
             转为 XML
-          </button>
-          <div class="my-1 border-t border-[var(--color-border)]"></div>
-          <button @click="$emit('escape')" class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-btn-bg)] transition-colors text-left">
-            <FileCode class="w-3.5 h-3.5" />
-            转义
-          </button>
-          <button @click="$emit('unescape')" class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-btn-bg)] transition-colors text-left">
-            <FileText class="w-3.5 h-3.5" />
-            去转义
           </button>
         </div>
       </div>
