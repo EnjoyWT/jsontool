@@ -24,7 +24,7 @@ import {
 type ContentFormat = "json" | "yaml" | "xml" | "text";
 
 const jsonText = ref(
-  '{\n  "name": "JSON Tool",\n  "version": "2.0.0",\n  "description": "现代简约风格的 JSON 工具",\n  "features": [\n    "格式化与压缩",\n    "实时预览",\n    "格式转换",\n    "语法校验"\n  ],\n  "author": "Alma"\n}'
+  '{\n  "name": "JSON Tool",\n  "version": "2.0.0",\n  "description": "现代简约风格的 JSON 工具",\n  "features": [\n    "格式化与压缩",\n    "实时预览",\n    "格式转换",\n    "语法校验"\n  ],\n  "author": "JoyTim"\n}'
 );
 
 const contentFormat = ref<ContentFormat>("json");
