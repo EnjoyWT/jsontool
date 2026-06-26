@@ -107,7 +107,7 @@ defineEmits([
           <ChevronDown class="w-3 h-3 opacity-50 group-hover:rotate-180 transition-transform" />
         </button>
 
-        <div class="absolute right-0 top-full pt-1 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-200 z-50 min-w-[140px] bg-[var(--color-bg-card)] rounded-lg shadow-xl border border-[var(--color-border)] py-1">
+        <div class="absolute left-0 top-full pt-1 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-200 z-50 min-w-[140px] bg-[var(--color-bg-card)] rounded-lg shadow-xl border border-[var(--color-border)] py-1">
           <!-- Bridge to prevent dropdown from closing -->
           <div class="absolute inset-0 -top-2 h-2"></div>
 
